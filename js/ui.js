@@ -84,13 +84,7 @@ TaskFlow.UI = (function () {
     editBtn.dataset.action = 'edit';
     editBtn.textContent = 'Edit';
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'btn btn-danger';
-    deleteBtn.dataset.action = 'delete';
-    deleteBtn.textContent = 'Delete';
-
-    actions.append(editBtn, deleteBtn);
+    actions.append(editBtn);
 
     card.append(header, description, meta, actions);
     return card;
