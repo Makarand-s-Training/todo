@@ -15,12 +15,8 @@ TaskFlow.UI = (function () {
     taskModal: document.getElementById('task-modal'),
     taskModalTitle: document.getElementById('task-modal-title'),
     taskForm: document.getElementById('task-form'),
-    confirmModal: document.getElementById('confirm-modal'),
-    confirmMessage: document.getElementById('confirm-message'),
     toastContainer: document.getElementById('toast-container')
   };
-
-  let confirmCallback = null;
 
   function todayISODate() {
     return new Date().toISOString().slice(0, 10);
@@ -84,13 +80,7 @@ TaskFlow.UI = (function () {
     editBtn.dataset.action = 'edit';
     editBtn.textContent = 'Edit';
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'btn btn-danger';
-    deleteBtn.dataset.action = 'delete';
-    deleteBtn.textContent = 'Delete';
-
-    actions.append(editBtn, deleteBtn);
+    actions.append(editBtn);
 
     card.append(header, description, meta, actions);
     return card;
@@ -159,23 +149,6 @@ TaskFlow.UI = (function () {
     document.querySelectorAll('.invalid').forEach((el) => el.classList.remove('invalid'));
   }
 
-  function openConfirmModal(message, onConfirm) {
-    els.confirmMessage.textContent = message;
-    confirmCallback = onConfirm;
-    els.confirmModal.hidden = false;
-  }
-
-  function closeConfirmModal() {
-    els.confirmModal.hidden = true;
-    confirmCallback = null;
-  }
-
-  function runConfirmCallback() {
-    const cb = confirmCallback;
-    closeConfirmModal();
-    if (typeof cb === 'function') cb();
-  }
-
   function showToast(message, type) {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type === 'error' ? 'error' : 'success'}`;
@@ -190,9 +163,6 @@ TaskFlow.UI = (function () {
     closeTaskModal,
     displayFieldErrors,
     clearFieldErrors,
-    openConfirmModal,
-    closeConfirmModal,
-    runConfirmCallback,
     showToast
   };
 })();

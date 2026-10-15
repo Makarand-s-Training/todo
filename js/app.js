@@ -82,14 +82,6 @@ TaskFlow.App = (function () {
 
     if (button.dataset.action === 'edit') {
       UI.openTaskModal('edit', task);
-    } else if (button.dataset.action === 'delete') {
-      UI.openConfirmModal(`Delete "${task.title}"? This cannot be undone.`, () => {
-        state.tasks = state.tasks.filter((t) => t.id !== taskId);
-        if (persist()) {
-          UI.showToast('Task deleted.', 'success');
-        }
-        UI.renderTasks(state.tasks);
-      });
     }
   }
 
@@ -104,25 +96,16 @@ TaskFlow.App = (function () {
 
     document.getElementById('task-list').addEventListener('click', handleTaskListClick);
 
-    document.getElementById('confirm-ok-btn').addEventListener('click', UI.runConfirmCallback);
-    document.getElementById('confirm-cancel-btn').addEventListener('click', UI.closeConfirmModal);
-
     document.addEventListener('keydown', (event) => {
       if (event.key !== 'Escape') return;
       const taskModal = document.getElementById('task-modal');
-      const confirmModal = document.getElementById('confirm-modal');
-      if (!confirmModal.hidden) UI.closeConfirmModal();
-      else if (!taskModal.hidden) UI.closeTaskModal();
+      if (!taskModal.hidden) UI.closeTaskModal();
     });
 
-    [['task-modal', UI.closeTaskModal], ['confirm-modal', UI.closeConfirmModal]].forEach(
-      ([id, closeFn]) => {
-        const overlay = document.getElementById(id);
-        overlay.addEventListener('click', (event) => {
-          if (event.target === overlay) closeFn();
-        });
-      }
-    );
+    const taskModal = document.getElementById('task-modal');
+    taskModal.addEventListener('click', (event) => {
+      if (event.target === taskModal) UI.closeTaskModal();
+    });
   }
 
   function init() {
