@@ -70,7 +70,7 @@ body {
 
 .task-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 1rem;
 }
 
@@ -89,6 +89,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  min-width: 0;
 }
 
 .task-card-header {
@@ -112,6 +113,35 @@ body {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+}
+
+.task-details {
+  min-width: 0;
+}
+
+.task-details .task-description {
+  display: block;
+  overflow: visible;
+  margin-bottom: 0.8rem;
+}
+
+.inline-task-form {
+  width: 100%;
+}
+
+.inline-task-form .form-field {
+  min-width: 0;
+}
+
+.inline-task-form input,
+.inline-task-form select,
+.inline-task-form textarea {
+  width: 100%;
+  min-width: 0;
+}
+
+.inline-form-actions {
+  flex-wrap: wrap;
 }
 
 .task-meta {

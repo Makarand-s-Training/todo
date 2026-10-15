@@ -80,8 +80,11 @@ TaskFlow.App = (function () {
     const task = state.tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    if (button.dataset.action === 'edit') {
-      UI.openTaskModal('edit', task);
+    if (button.dataset.action === 'toggle-details') {
+      const expanded = button.getAttribute('aria-expanded') !== 'true';
+      UI.setDetailsExpanded(card, expanded, task);
+    } else if (button.dataset.action === 'cancel-edit') {
+      UI.setDetailsExpanded(card, false);
     } else if (button.dataset.action === 'delete') {
       UI.openConfirmModal(`Delete "${task.title}"? This cannot be undone.`, () => {
         state.tasks = state.tasks.filter((t) => t.id !== taskId);
@@ -91,6 +94,44 @@ TaskFlow.App = (function () {
         UI.renderTasks(state.tasks);
       });
     }
+  }
+
+  function handleInlineFormSubmit(event) {
+    const form = event.target;
+    if (!form.matches('.inline-task-form')) return;
+    event.preventDefault();
+
+    const card = form.closest('.task-card');
+    const taskId = card && card.dataset.taskId;
+    const index = state.tasks.findIndex((task) => task.id === taskId);
+    if (index === -1) {
+      UI.showToast('That task no longer exists.', 'error');
+      return;
+    }
+
+    const data = readFormData(form);
+    const { isValid, errors } = Validation.validateTask(data);
+    if (!isValid) {
+      UI.displayFieldErrors(errors, form);
+      return;
+    }
+
+    const updatedTasks = [...state.tasks];
+    updatedTasks[index] = {
+      ...state.tasks[index],
+      ...data,
+      updatedAt: new Date().toISOString()
+    };
+
+    const result = Storage.saveTasks(updatedTasks);
+    if (!result.success) {
+      UI.showToast(`Could not save changes: ${result.error}`, 'error');
+      return;
+    }
+
+    state.tasks = updatedTasks;
+    UI.renderTasks(state.tasks);
+    UI.showToast('Task updated.', 'success');
   }
 
   function bindEvents() {
@@ -103,6 +144,7 @@ TaskFlow.App = (function () {
     document.getElementById('task-modal-close-btn').addEventListener('click', UI.closeTaskModal);
 
     document.getElementById('task-list').addEventListener('click', handleTaskListClick);
+    document.getElementById('task-list').addEventListener('submit', handleInlineFormSubmit);
 
     document.getElementById('confirm-ok-btn').addEventListener('click', UI.runConfirmCallback);
     document.getElementById('confirm-cancel-btn').addEventListener('click', UI.closeConfirmModal);
