@@ -36,7 +36,86 @@ TaskFlow.UI = (function () {
     return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  function buildTaskCard(task) {
+  function createInlineField(form, prefix, labelText, name, type, options) {
+    const field = document.createElement('div');
+    field.className = 'form-field';
+
+    const label = document.createElement('label');
+    const inputId = `${prefix}-${name}`;
+    label.htmlFor = inputId;
+    label.textContent = labelText;
+
+    let input;
+    if (type === 'textarea') {
+      input = document.createElement('textarea');
+      input.rows = 3;
+      input.maxLength = 500;
+    } else if (type === 'select') {
+      input = document.createElement('select');
+      options.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        input.appendChild(option);
+      });
+    } else {
+      input = document.createElement('input');
+      input.type = type;
+      if (name === 'title') input.maxLength = 100;
+      if (name === 'category') input.maxLength = 40;
+    }
+
+    input.id = inputId;
+    input.name = name;
+
+    const error = document.createElement('span');
+    error.className = 'field-error';
+    error.dataset.fieldError = name;
+
+    field.append(label, input, error);
+    form.appendChild(field);
+  }
+
+  function buildInlineForm(prefix) {
+    const form = document.createElement('form');
+    form.className = 'inline-task-form';
+    form.noValidate = true;
+
+    createInlineField(form, prefix, 'Title', 'title', 'text');
+    createInlineField(form, prefix, 'Description', 'description', 'textarea');
+
+    const detailsRow = document.createElement('div');
+    detailsRow.className = 'form-row';
+    form.appendChild(detailsRow);
+    createInlineField(detailsRow, prefix, 'Priority', 'priority', 'select', ['Low', 'Medium', 'High']);
+    createInlineField(detailsRow, prefix, 'Status', 'status', 'select', ['To Do', 'In Progress', 'Completed']);
+
+    const categoryRow = document.createElement('div');
+    categoryRow.className = 'form-row';
+    form.appendChild(categoryRow);
+    createInlineField(categoryRow, prefix, 'Category', 'category', 'text');
+    createInlineField(categoryRow, prefix, 'Due Date', 'dueDate', 'date');
+
+    const actions = document.createElement('div');
+    actions.className = 'modal-actions inline-form-actions';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'btn btn-secondary';
+    cancel.dataset.action = 'cancel-edit';
+    cancel.textContent = 'Cancel';
+
+    const save = document.createElement('button');
+    save.type = 'submit';
+    save.className = 'btn btn-primary';
+    save.textContent = 'Save Task';
+
+    actions.append(cancel, save);
+    form.appendChild(actions);
+    return form;
+  }
+
+  function buildTaskCard(task, index) {
     const card = document.createElement('article');
     card.className = 'task-card';
     card.dataset.taskId = task.id;
@@ -58,6 +137,13 @@ TaskFlow.UI = (function () {
     description.className = 'task-description';
     description.textContent = task.description || 'No description provided.';
 
+    const detailsId = `task-details-${index}`;
+    const details = document.createElement('div');
+    details.id = detailsId;
+    details.className = 'task-details';
+    details.hidden = true;
+    details.append(description, buildInlineForm(`task-${index}`));
+
     const meta = document.createElement('div');
     meta.className = 'task-meta';
 
@@ -78,11 +164,13 @@ TaskFlow.UI = (function () {
     const actions = document.createElement('div');
     actions.className = 'task-actions';
 
-    const editBtn = document.createElement('button');
-    editBtn.type = 'button';
-    editBtn.className = 'btn btn-secondary';
-    editBtn.dataset.action = 'edit';
-    editBtn.textContent = 'Edit';
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'btn btn-secondary';
+    moreBtn.dataset.action = 'toggle-details';
+    moreBtn.setAttribute('aria-expanded', 'false');
+    moreBtn.setAttribute('aria-controls', detailsId);
+    moreBtn.textContent = 'More';
 
     const deleteBtn = document.createElement('button');
     deleteBtn.type = 'button';
@@ -90,9 +178,9 @@ TaskFlow.UI = (function () {
     deleteBtn.dataset.action = 'delete';
     deleteBtn.textContent = 'Delete';
 
-    actions.append(editBtn, deleteBtn);
+    actions.append(moreBtn, deleteBtn);
 
-    card.append(header, description, meta, actions);
+    card.append(header, meta, actions, details);
     return card;
   }
 
@@ -105,7 +193,7 @@ TaskFlow.UI = (function () {
     els.emptyState.hidden = true;
     const sorted = [...tasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     const fragment = document.createDocumentFragment();
-    sorted.forEach((task) => fragment.appendChild(buildTaskCard(task)));
+    sorted.forEach((task, index) => fragment.appendChild(buildTaskCard(task, index)));
     els.taskList.appendChild(fragment);
   }
 
@@ -144,19 +232,39 @@ TaskFlow.UI = (function () {
     dueDate: 'task-due-date'
   };
 
-  function displayFieldErrors(errors) {
-    clearFieldErrors();
+  function displayFieldErrors(errors, form = els.taskForm) {
+    clearFieldErrors(form);
     Object.keys(errors).forEach((field) => {
-      const errorEl = document.getElementById(`${field}-error`);
-      const inputEl = document.getElementById(FIELD_INPUT_ID[field]);
+      const errorEl = form.querySelector(`[data-field-error="${field}"]`) ||
+        (form === els.taskForm ? document.getElementById(`${field}-error`) : null);
+      const inputEl = form.elements[field] || document.getElementById(FIELD_INPUT_ID[field]);
       if (errorEl) errorEl.textContent = errors[field];
       if (inputEl) inputEl.classList.add('invalid');
     });
   }
 
-  function clearFieldErrors() {
-    document.querySelectorAll('.field-error').forEach((el) => (el.textContent = ''));
-    document.querySelectorAll('.invalid').forEach((el) => el.classList.remove('invalid'));
+  function clearFieldErrors(form = els.taskForm) {
+    form.querySelectorAll('.field-error').forEach((el) => (el.textContent = ''));
+    form.querySelectorAll('.invalid').forEach((el) => el.classList.remove('invalid'));
+  }
+
+  function fillInlineForm(form, task) {
+    form.elements.title.value = task.title;
+    form.elements.description.value = task.description;
+    form.elements.priority.value = task.priority;
+    form.elements.status.value = task.status;
+    form.elements.category.value = task.category;
+    form.elements.dueDate.value = task.dueDate;
+    clearFieldErrors(form);
+  }
+
+  function setDetailsExpanded(card, expanded, task) {
+    const button = card.querySelector('[data-action="toggle-details"]');
+    const details = card.querySelector('.task-details');
+    if (expanded && task) fillInlineForm(details.querySelector('form'), task);
+    details.hidden = !expanded;
+    button.setAttribute('aria-expanded', String(expanded));
+    button.textContent = expanded ? 'Less' : 'More';
   }
 
   function openConfirmModal(message, onConfirm) {
@@ -190,6 +298,8 @@ TaskFlow.UI = (function () {
     closeTaskModal,
     displayFieldErrors,
     clearFieldErrors,
+    fillInlineForm,
+    setDetailsExpanded,
     openConfirmModal,
     closeConfirmModal,
     runConfirmCallback,
